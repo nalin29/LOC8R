@@ -1,13 +1,14 @@
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Set;
 import java.util.TreeMap;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -23,9 +24,13 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundImage;
 import javafx.scene.layout.BackgroundPosition;
@@ -46,7 +51,7 @@ public class FrontEnd extends Application {
 	ArrayList<String> temp = new ArrayList<>();
 	static double lat;
 	static double longi;
-	
+	static String add; 
 	public static void main(String[] args) {
 		
 		launch(args);
@@ -71,7 +76,8 @@ public class FrontEnd extends Application {
 		   Media hit = new Media(new File(bip).toURI().toString());
 		   MediaPlayer mediaPlayer = new MediaPlayer(hit);
 		   mediaPlayer.play();
-		   Image image = new Image("loading.PNG");
+		   Image image = new Image("loading.png");
+		   //Image image = new Image("loading.png");
 			 // new BackgroundSize(width, height, widthAsPercentage, heightAsPercentage, contain, cover)
 			
 		   BackgroundSize backgroundSize = new BackgroundSize(906, 515, true, true, true, false);
@@ -143,24 +149,29 @@ public class FrontEnd extends Application {
 		   Scene AdressScene = new Scene(address, 600,600);
 	//List Scene for Locations________________________________________________________________________
 		   BorderPane lists = new BorderPane();
-		   ListView locations = new ListView(items);
-		   
+		   ListView<String> locations = new ListView<String>();
+		   locations.setItems(items);
+		   lists.setLeft(locations);
+		   TextArea locationData = new TextArea();
+		   locationData.setEditable(false);
+		   lists.setRight(locationData);
 		Scene list = new Scene(lists, 600,600);
 	//Reviewed Scene
 		BorderPane reviews = new BorderPane();
 		VBox but = new VBox();
 	//Actions______________________________________________________________________________________
-		   Timeline timeline = new Timeline(
+		    Timeline timeline = new Timeline(
 			        new KeyFrame(Duration.ZERO, new KeyValue(progress.progressProperty(), 0)),
 			        new KeyFrame(Duration.seconds(5), e-> {
 			            // do anything you need here on completion...
 			            System.out.println("loadi over");
 			            stage.setScene(home);
+			            mediaPlayer.stop();
 			        }, new KeyValue(progress.progressProperty(), 1))    
 			    );
 			    timeline.setCycleCount(1);
-			    timeline.play();
-	        
+			   timeline.play();
+			   // stage.setScene(AdressScene);
 	            //searching
 	            search.setOnAction( e-> {
 	        	stage.setScene(AdressScene);
@@ -175,12 +186,14 @@ public class FrontEnd extends Application {
 	        
 	        next.setOnAction(e ->{
 	        	try {
+	        		add = Address.getText();
 					location(Address.getText());
 				} catch (Exception e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
 	        	TreeMap<Double ,ArrayList<Location>> sorted = new TreeMap<>();
+	        	HashMap<String, ArrayList<Location>> locData = data.getLocData();
 	        	for(int i =0; i<data.getLocData().get(tag.getValue()).size();i++){
 	        		double value = score(data.getLocData().get(tag.getValue()).get(i),dist(data.getLocData().get(tag.getValue()).get(i)));
 	        		if(sorted.containsKey(value))
@@ -191,14 +204,38 @@ public class FrontEnd extends Application {
 	        		}
 	        	}
 	        	int i=0;
-	        	for(double v: sorted.keySet())
-	        		for(Location l : sorted.get(v))
-	        			temp.add(l.toString());
+	        	for(double v: sorted.keySet()) {
+	        		for(Location l : sorted.get(v)) {
+	        			temp.add(l.getName());
+	        				i++;
+	        				if(i==8)
+	        					break;
+	        		}
+	        		if(i == 8)
+	        			break;
+	        	}
+	        	System.out.println(temp);
 	        	items =FXCollections.observableArrayList (temp);
+	        	locations.setItems(items);
 	        	stage.setScene(list);
 	        	
 	        });
-	        
+	        locations.addEventHandler(MouseEvent.MOUSE_PRESSED,e ->{
+	        	int i = locations.getSelectionModel().getSelectedIndex();
+	        	for(Location l: data.getLocData().get(tag.getValue()))
+	        		if(l.getName().equals(items.get(i)))
+	        			locationData.setText("Name: "+l.getName()+"\n"+"Type: "+l.getType()+"\nYour Review: "+l.getReview()+"\nLongitude: "+l.getLongitude()+"\nLatitude: "+l.getLatitude()+"\nDistance: "+dist(l)+"\nDirections: "+"https://www.google.com/maps/dir/add/"+l.getAddress()+"\n Yelp Reviews: "+"https://www.yelp.com/biz/"+l.getName().replaceAll("\\s","-")+"-austin-crossroads-austin?osq="+l.getAddress());
+	        });
+	        locations.addEventHandler(KeyEvent.KEY_PRESSED,e ->{
+	        	if(e.getCode().equals(KeyCode.DOWN) ||e.getCode().equals(KeyCode.UP) ) {
+					int s = locations.getSelectionModel().getSelectedIndex();
+				if(s <0)
+					return;
+	        	for(Location l: data.getLocData().get(tag.getValue()))
+	        		if(l.getName().equals(items.get(s)))
+	        			locationData.setText("Name: "+l.getName()+"\n"+"Type: "+l.getType()+"\nYour Review: "+l.getReview()+"\nLongitude: "+l.getLongitude()+"\nLatitude: "+l.getLatitude()+"\nDistance: "+dist(l)+"\nDirections: "+"https://www.google.com/maps/dir/add/"+l.getAddress()+"\n Yelp Reviews: "+"https://www.yelp.com/biz/"+l.getName().replaceAll("\\s","-")+"-austin-crossroads-austin?osq="+l.getAddress());
+	        	}
+	        	});
 	        
 	}
 	public static double dist( Location l ) {
@@ -212,11 +249,11 @@ public class FrontEnd extends Application {
 		return 1+dist*1/Math.sqrt(l.getReview());
 	}
 	public static void location(String add) throws Exception {
+		//add = "11608 spicewood pkwy";
 		String address = add.replaceAll("\\s", "%");
-		URL url = new URL("http://www.mapquestapi.com/geocoding/v1/address?key=AAAUwZvzc7sPNu0bKvipXlFG8p6g4adI&location=" +address);
-
+		URL url = new URL("http://www.mapquestapi.com/geocoding/v1/address?key=AAAUwZvzc7sPNu0bKvipXlFG8p6g4adI&location=" +address);		
         BufferedReader br = null;
-
+        
         try {
 
             br = new BufferedReader(new InputStreamReader(url.openStream()));
@@ -227,11 +264,19 @@ public class FrontEnd extends Application {
 
             while ((line = br.readLine()) != null) {
 
-                sb.append(line);
-                sb.append(System.lineSeparator());
-            }
-
-            System.out.println(sb);
+                sb.append(line);            }
+          //  System.out.println(sb.toString());
+        	JSONObject obj = new JSONObject(sb.toString());
+        	JSONArray res = obj.getJSONArray("results");
+        	//System.out.println(res.toString());
+        	JSONArray loc = res.getJSONObject(0).getJSONArray("locations");
+        	//System.out.println(loc.toString());
+        	JSONObject latLng = loc.getJSONObject(0);
+        	//System.out.println(latLng.toString());
+        	lat = latLng.getJSONObject("latLng").getDouble("lat");
+        	longi = latLng.getJSONObject("latLng").getDouble("lng");
+        	System.out.println("latitude: "+ lat);
+        	System.out.println("Longitude: "+longi);
         } finally {
 
             if (br != null) {
