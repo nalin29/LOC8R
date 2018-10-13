@@ -11,7 +11,7 @@ public class DataBase {
 	private ArrayList<Location> recent  = new ArrayList<>();
 	private File user;
 	private File data;
-	public DataBase() {
+	public DataBase() throws Exception {
 		reviews.put(1, new ArrayList<Location>());
 		reviews.put(2, new ArrayList<Location>());
 		reviews.put(3, new ArrayList<Location>());
@@ -22,7 +22,8 @@ public class DataBase {
 		try {
 			Scanner s = new Scanner(data);
 			while(s.hasNextLine()) {
-				String[] location = s.nextLine().split("\\t");
+				String loc = s.nextLine();
+				String[] location = loc.split("\\t");
 				Location tempLoc;
 				if(location.length == 5) {
 					tempLoc = new Location(location[0],location[1],location[2],Double.parseDouble(location[3]),Double.parseDouble(location[4]),0);
@@ -79,6 +80,7 @@ public class DataBase {
 			for(Location l:recent) {
 				out.println(l.toString());
 			}
+			out.close();
 		} catch (FileNotFoundException e) {
 			System.out.println("NO file found");
 			e.printStackTrace();
@@ -90,7 +92,7 @@ public class DataBase {
 				out.println(l.toString());
 			}
 		}
-		
+		out.close();
 	} catch (FileNotFoundException e) {
 		System.out.println("NO file found");
 		e.printStackTrace();
